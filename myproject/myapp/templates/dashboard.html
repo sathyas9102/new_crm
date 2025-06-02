@@ -1,0 +1,227 @@
+{% extends "base.html" %}
+{% load static %}
+{% block extra_head %}
+<style>
+    .kanban-board {
+        display: flex;
+        overflow-x: auto;
+        gap: 20px;
+    }
+    .kanban-column {
+        background: #f1f1f1;
+        border-radius: 8px;
+        padding: 15px;
+        min-width: 280px;
+    }
+    .customer-card {
+        background: white;
+        padding: 10px;
+        margin-bottom: 10px;
+        border-radius: 6px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        cursor: grab;
+        position: relative;
+    }
+    .activity-icon {
+        position: absolute;
+        top: 5px;
+        right: 8px;
+        color: #0d6efd;
+        cursor: pointer;
+    }
+    .highlight {
+        background-color: #fff3cd !important;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="kanban-board" id="kanbanBoard">
+    {% for stage, customers in stage_customers.items %}
+    <div class="kanban-column" data-stage="{{ stage }}">
+        <h5>{{ stage }}</h5>
+        <div class="customer-list" data-stage="{{ stage }}">
+            {% for customer in customers %}
+            <div class="customer-card {% if customer.highlight %}highlight{% endif %}" 
+                 draggable="true" 
+                 data-id="{{ customer.id }}" 
+                 data-name="{{ customer.name }}">
+                <strong>{{ customer.name }}</strong><br>
+                {{ customer.phone }}<br>
+                {{ customer.email }}
+                <i class="fas fa-clock activity-icon" data-id="{{ customer.id }}"></i>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- Add Customer Modal -->
+<div class="modal fade" id="addCustomerModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form method="POST" action="{% url 'add_customer' %}" class="modal-content">
+      {% csrf_token %}
+      <div class="modal-header">
+        <h5 class="modal-title">Add New Customer</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <div class="mb-2">
+            <label>Name</label>
+            <input type="text" name="name" class="form-control" required>
+        </div>
+        <div class="mb-2">
+            <label>Email</label>
+            <input type="email" name="email" class="form-control">
+        </div>
+        <div class="mb-2">
+            <label>Phone</label>
+            <input type="text" name="phone" class="form-control">
+        </div>
+        <div class="mb-2">
+            <label>Stage</label>
+            <select name="stage" class="form-select">
+                <option value="New">New</option>
+                <option value="FollowUp1">FollowUp1</option>
+                <option value="FollowUp2">FollowUp2</option>
+                <option value="FollowUp3">FollowUp3</option>
+                <option value="Not Interested">Not Interested</option>
+                <option value="Won">Won</option>
+            </select>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-success" type="submit">Save</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Move Modal -->
+<div class="modal fade" id="moveModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <form id="moveForm" class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Move Lead</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" name="id" id="moveCustomerId">
+        <input type="hidden" name="new_stage" id="moveNewStage">
+
+        <div class="mb-3">
+          <label>Reason <span class="text-danger">*</span></label>
+          <textarea class="form-control" name="reason" id="reason" required></textarea>
+        </div>
+
+        <div class="mb-2">
+          <label>Next Activity Type <span class="text-danger">*</span></label>
+          <select class="form-select" name="activity_type" id="activity_type" required>
+            <option value="">Select</option>
+            <option value="Call">Call</option>
+            <option value="Email">Email</option>
+            <option value="WhatsApp">WhatsApp</option>
+            <option value="Meeting">Meeting</option>
+          </select>
+        </div>
+
+        <div class="mb-2">
+          <label>Date & Time <span class="text-danger">*</span></label>
+          <input type="datetime-local" class="form-control" name="activity_time" id="activity_time" required>
+        </div>
+
+        <div class="mb-2">
+          <label>Notes</label>
+          <textarea class="form-control" name="activity_notes" id="activity_notes"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-primary" type="submit">Confirm</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Activity Modal -->
+<div class="modal fade" id="activityModal" tabindex="-1" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content" id="activityContent">
+      <div class="modal-header">
+        <h5 class="modal-title">Scheduled Activities</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body" id="activityList">
+        <!-- Filled via JavaScript -->
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.querySelectorAll('.customer-card').forEach(card => {
+    card.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('id', card.dataset.id);
+        e.dataTransfer.setData('name', card.dataset.name);
+    });
+});
+
+document.querySelectorAll('.customer-list').forEach(list => {
+    list.addEventListener('dragover', e => e.preventDefault());
+
+    list.addEventListener('drop', e => {
+        e.preventDefault();
+        const id = e.dataTransfer.getData('id');
+        const newStage = list.dataset.stage;
+
+        document.getElementById('moveCustomerId').value = id;
+        document.getElementById('moveNewStage').value = newStage;
+        new bootstrap.Modal(document.getElementById('moveModal')).show();
+    });
+});
+
+document.getElementById('moveForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    const form = e.target;
+    const data = new FormData(form);
+    const csrftoken = '{{ csrf_token }}';
+
+    const res = await fetch("{% url 'move_customer' %}", {
+        method: 'POST',
+        headers: {'X-CSRFToken': csrftoken},
+        body: data
+    });
+
+    const result = await res.json();
+    if (result.status === 'success') {
+        location.reload();
+    } else {
+        alert(result.error || 'Error occurred');
+    }
+});
+
+// Activity icon click
+document.querySelectorAll('.activity-icon').forEach(icon => {
+    icon.addEventListener('click', async () => {
+        const id = icon.dataset.id;
+        const res = await fetch(`/activities/${id}/`);
+        const data = await res.json();
+
+        const list = document.getElementById('activityList');
+        list.innerHTML = '';
+        data.activities.forEach(act => {
+            const item = document.createElement('div');
+            item.className = 'mb-2';
+            item.innerHTML = `<strong>📌 ${act.type}</strong> – ${act.datetime}<br>${act.notes || ''}`;
+            list.appendChild(item);
+        });
+
+        new bootstrap.Modal(document.getElementById('activityModal')).show();
+    });
+});
+</script>
+{% endblock %}

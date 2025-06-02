@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Bulk Mail</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+  <style>
+    .tag {
+      background-color: #f1f1f1;
+      border: 1px solid #ccc;
+      padding: 5px 10px;
+      margin: 3px;
+      display: inline-block;
+      border-radius: 20px;
+    }
+  </style>
+</head>
+<body class="p-4 bg-light">
+
+<div class="container">
+  <h2 class="mb-4">📧 Bulk Email Sender</h2>
+
+  <div class="row mb-3">
+    <div class="col-md-4">
+      <label>Select Category</label>
+      <select class="form-select" id="categorySelect">
+        <option value="">-- Select --</option>
+        <option value="New">New</option>
+        <option value="FollowUp1">FollowUp1</option>
+        <option value="FollowUp2">FollowUp2</option>
+        <option value="FollowUp3">FollowUp3</option>
+        <option value="Not Interested">Not Interested</option>
+        <option value="Won">Won</option>
+      </select>
+    </div>
+    <div class="col-md-8">
+      <label>Add Emails Manually</label>
+      <input type="text" id="manualEmail" class="form-control" placeholder="Enter email and press Enter">
+      <div id="emailTags" class="mt-2"></div>
+    </div>
+  </div>
+
+  <form id="bulkMailForm" enctype="multipart/form-data">
+    <input type="hidden" name="emails[]" id="emailsInput">
+
+    <div class="mb-3">
+      <label>Upload Excel (optional)</label>
+      <input type="file" class="form-control" accept=".xlsx,.xls">
+    </div>
+
+    <div class="mb-3">
+      <label>Subject</label>
+      <input type="text" name="subject" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+      <label>Message</label>
+      <textarea name="message" class="form-control" rows="6" required></textarea>
+    </div>
+
+    <div class="mb-3">
+      <label>Attachment</label>
+      <input type="file" name="attachment" class="form-control">
+    </div>
+
+    <button class="btn btn-primary">Send Email</button>
+  </form>
+</div>
+
+<script>
+  let emailList = [];
+
+  function updateEmailTags() {
+    $('#emailTags').empty();
+    emailList.forEach(email => {
+      $('#emailTags').append(`<span class="tag">${email}</span>`);
+    });
+    $('#emailsInput').val(emailList);
+  }
+
+  $('#manualEmail').on('keypress', function (e) {
+    if (e.which === 13) {
+      e.preventDefault();
+      const val = $(this).val().trim();
+      if (val && !emailList.includes(val)) {
+        emailList.push(val);
+        updateEmailTags();
+        $(this).val('');
+      }
+    }
+  });
+
+  $('#categorySelect').change(function () {
+    const category = $(this).val();
+    if (!category) return;
+    $.ajax({
+      url: '/get_customers_by_category/',
+      method: 'POST',
+      contentType: 'application/json',
+      headers: { 'X-CSRFToken': '{{ csrf_token }}' },
+      data: JSON.stringify({ category }),
+      success: function (res) {
+        const emails = res.customers.map(c => c.email).filter(Boolean);
+        emailList = [...new Set([...emailList, ...emails])];
+        updateEmailTags();
+      }
+    });
+  });
+
+  $('#bulkMailForm').submit(function (e) {
+    e.preventDefault();
+    const formData = new FormData(this);
+    emailList.forEach(e => formData.append('emails[]', e));
+    $.ajax({
+      url: '/send_bulk_mail/',
+      method: 'POST',
+      data: formData,
+      contentType: false,
+      processData: false,
+      success: res => alert(res.status),
+      error: () => alert('Error sending emails')
+    });
+  });
+</script>
+
+</body>
+</html>

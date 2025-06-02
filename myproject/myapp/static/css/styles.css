@@ -1,0 +1,98 @@
+/* Background and general body style */
+body {
+    background-color: #f8f9fa;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Container padding */
+.container-fluid {
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+/* Stage columns style */
+.stage-column {
+    background-color: #ffffff;
+    border-radius: 12px;
+    padding: 15px;
+    min-width: 280px;
+    max-width: 320px;
+    margin-right: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+/* Stage title */
+.stage-column h5 {
+    text-align: center;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 15px;
+}
+
+/* Customer cards */
+.customer-card {
+    border: 1px solid #ddd;
+    border-radius: 10px;
+    padding: 12px 15px;
+    margin-bottom: 12px;
+    background-color: #fff;
+    transition: background-color 0.3s, border-color 0.3s;
+    cursor: grab;
+}
+
+/* Style for system-moved customers */
+.customer-card.system-moved {
+    border-color: #e74c3c;
+    background-color: #fdecea;
+}
+
+/* Hover effect */
+.customer-card:hover {
+    background-color: #f1f7ff;
+    border-color: #85a9ff;
+}
+
+/* Buttons container inside each customer card */
+.customer-card .btn {
+    margin-right: 8px;
+    margin-top: 8px;
+    font-size: 0.85rem;
+    padding: 4px 10px;
+}
+
+/* Make sure last button has no right margin */
+.customer-card .btn:last-child {
+    margin-right: 0;
+}
+
+/* Heading of the dashboard */
+h3 {
+    font-weight: 700;
+    color: #222;
+    margin-bottom: 25px;
+}
+
+/* Scroll container for stages */
+.d-flex.flex-nowrap.overflow-auto {
+    padding-bottom: 10px;
+}
+
+/* Scrollbar styling for stage columns */
+.stage-column::-webkit-scrollbar {
+    width: 6px;
+}
+
+.stage-column::-webkit-scrollbar-thumb {
+    background-color: rgba(0,0,0,0.1);
+    border-radius: 3px;
+}
+
+.stage-column::-webkit-scrollbar-track {
+    background-color: transparent;
+}
